@@ -180,7 +180,7 @@ s3_put(const char * key_id, const char * key_secret, const char * region,
 	/* Construct request header and compute length. */
 	if (asprintf(&headers,
 	    "PUT %s HTTP/1.1\r\n"
-	    "Host: %s.s3.amazonaws.com\r\n"
+	    "Host: %s.s3.cn-northwest-1.amazonaws.com.cn\r\n"
 	    "X-Amz-Date: %s\r\n"
 	    "X-Amz-Content-SHA256: %s\r\n"
 	    "Authorization: %s\r\n"
@@ -201,8 +201,9 @@ s3_put(const char * key_id, const char * key_secret, const char * region,
 	len += buflen;
 
 	/* Construct S3 endpoint name. */
-	if (strcmp(region, "us-east-1")) {
-		if (asprintf(&host, "s3.%s.amazonaws.com", region) == -1)
+//	if (strcmp(region, "cn-northwest-1")) {
+	if (strcmp(region, "us-est-1")) {
+		if (asprintf(&host, "s3.%s.amazonaws.com.cn", region) == -1)
 			goto err2;
 	} else {
 		if (asprintf(&host, "s3.amazonaws.com", region) == -1)
@@ -304,6 +305,8 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 	}
 	hexify(nonce, noncehex, 16);
 
+	//strncpy(noncehex,"066e5b14d6b74de17fb6b64cf9f180b9",33);
+
 	/* Open the disk image and determine its length. */
 	if ((f = fopen(fname, "r")) == NULL) {
 		warnp("Cannot open disk image: %s", fname);
@@ -344,7 +347,7 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 		    "<version>1.2.2</version>"
 		    "<release>2019-03-20</release>"
 		"</importer>"
-		"<self-destruct-url>https://%s.s3.amazonaws.com%s?%s</self-destruct-url>"
+		"<self-destruct-url>https://%s.s3.cn-northwest-1.amazonaws.com.cn%s?%s</self-destruct-url>"
 		"<import>"
 		    "<size>%" PRId64 "</size>"
 		    "<volume-size>%d</volume-size>"
@@ -360,7 +363,7 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 	free(path);
 
 	/* Say what we're doing. */
-	fprintf(stderr, "Uploading %s to\nhttp://%s.s3.amazonaws.com/%s/\n"
+	fprintf(stderr, "Uploading %s to\nhttp://%s.s3.cn-northwest-1.amazonaws.com.cn/%s/\n"
 	    "in %" PRId64 " part(s)", fname, bucket, noncehex,
 	    (uint64_t)(sb.st_size + PARTSZ - 1) / PARTSZ);
 
@@ -413,7 +416,7 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 		if ((query = encodeamp(query)) == NULL)
 			goto err4;
 		if (asprintf(&s,
-		    "<head-url>https://%s.s3.amazonaws.com%s?%s</head-url>",
+		    "<head-url>https://%s.s3.cn-nothwest-1.amazonaws.com.cn%s?%s</head-url>",
 		    bucket, path, query) == -1)
 			goto err5;
 		if (str_append(manifest, s, strlen(s)))
@@ -430,7 +433,7 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 		if ((query = encodeamp(query)) == NULL)
 			goto err4;
 		if (asprintf(&s,
-		    "<get-url>https://%s.s3.amazonaws.com%s?%s</get-url>",
+		    "<get-url>https://%s.s3.cn-northwest-1.amazonaws.com.cn%s?%s</get-url>",
 		    bucket, path, query) == -1)
 			goto err5;
 		if (str_append(manifest, s, strlen(s)))
@@ -447,7 +450,7 @@ uploadvolume(const char * fname, const char * region, const char * bucket,
 		if ((query = encodeamp(query)) == NULL)
 			goto err4;
 		if (asprintf(&s,
-		    "<delete-url>https://%s.s3.amazonaws.com%s?%s</delete-url>",
+		    "<delete-url>https://%s.s3.cn-nothwest-1.amazonaws.com.cn%s?%s</delete-url>",
 		    bucket, path, query) == -1)
 			goto err5;
 		if (str_append(manifest, s, strlen(s)))
@@ -543,7 +546,7 @@ ec2_apicall(const char * key_id, const char * key_secret, const char * region,
 	/* Construct request and compute length. */
 	if (asprintf(&req,
 	    "POST / HTTP/1.0\r\n"
-	    "Host: ec2.%s.amazonaws.com\r\n"
+	    "Host: ec2.%s.amazonaws.com.cn\r\n"
 	    "X-Amz-Date: %s\r\n"
 	    "X-Amz-Content-SHA256: %s\r\n"
 	    "Authorization: %s\r\n"
@@ -556,8 +559,9 @@ ec2_apicall(const char * key_id, const char * key_secret, const char * region,
 		goto err1;
 	len = strlen(req);
 
+	fprintf(stderr,"REQBEGIN===\n%s\nREQEND===\n", req);
 	/* Construct EC2 endpoint name. */
-	if (asprintf(&host, "ec2.%s.amazonaws.com", region) == -1)
+	if (asprintf(&host, "ec2.%s.amazonaws.com.cn", region) == -1)
 		goto err2;
 
 	/* Allocate space for a 16 kB response plus a trailing NUL. */
@@ -640,7 +644,8 @@ ec2_apicall_loop(const char * key_id, const char * key_secret,
 	int i;
 
 	/* Try up to 10 times. */
-	for (i = 0; i < 10; i++) {
+//	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 1; i++) {
 		body = ec2_apicall(key_id, key_secret, region, s);
 		if (body != NULL)
 			return (body);
@@ -834,7 +839,7 @@ importvolume(const char * region, const char * bucket, const char * manifest,
 	if ((query = aws_sign_s3_querystr(key_id, key_secret, region, "GET",
 	    bucket, manifest, 604800)) == NULL)
 		goto err0;
-	if (asprintf(&url, "https://%s.s3.amazonaws.com%s?%s",
+	if (asprintf(&url, "https://%s.s3.cn-northwest-1.amazonaws.com.cn%s?%s",
 	    bucket, manifest, query) == -1)
 		goto err1;
 	if ((urlenc = rfc3986_encode(url)) == NULL)
@@ -851,6 +856,8 @@ importvolume(const char * region, const char * bucket, const char * manifest,
 	    "Version=2014-09-01",
 	    region, size, urlenc, (size + (1 << 30) - 1) / (1 << 30)) == -1)
 		goto err3;
+
+	fprintf(stderr, "%s\n", s);
 
 	/* Issue API request. */
 	if ((resp = ec2_apicall(key_id, key_secret, region, s)) == NULL)
@@ -1573,7 +1580,7 @@ sns_publish(const char * key_id, const char * key_secret,
 	/* Construct request and compute length. */
 	if (asprintf(&req,
 	    "POST / HTTP/1.0\r\n"
-	    "Host: sns.%s.amazonaws.com\r\n"
+	    "Host: sns.%s.amazonaws.com.cn\r\n"
 	    "X-Amz-Date: %s\r\n"
 	    "X-Amz-Content-SHA256: %s\r\n"
 	    "Authorization: %s\r\n"
@@ -1588,7 +1595,7 @@ sns_publish(const char * key_id, const char * key_secret,
 	len = strlen(req);
 
 	/* Construct SNS endpoint name. */
-	if (asprintf(&host, "sns.%s.amazonaws.com", region) == -1)
+	if (asprintf(&host, "sns.%s.amazonaws.com.cn", region) == -1)
 		goto err7;
 
 	/* Allocate space for a 16 kB response plus a trailing NUL. */
